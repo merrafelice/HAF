@@ -1,5 +1,6 @@
 import tensorflow as tf
 import matplotlib.pyplot as plt
+import pickle
 
 from src.dataset.data_loader import CustomDataLoader
 from src.layers.utils import insert_saliency_layers
@@ -38,3 +39,15 @@ class HAFModel:
         plt.xlabel('Number of Iterations')
         if show:
             plt.show()
+
+    def save_trainable_variables(self, path_weights):
+        with open(path_weights + 'trainable_vars.pkl', 'wb') as f:
+            pickle.dump(self.haf_model.trainable_variables, f)
+
+    def restore_trainable_variables(self, path_weights):
+        try:
+            with open(path_weights + 'trainable_vars.pkl', 'rb') as f:
+                trainable_variables = pickle.load(f)
+            self.haf_model.trainable_variables = trainable_variables
+        except:
+            print('Error in the trainable variable loading\\*** Random Initialization ***')
