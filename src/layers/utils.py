@@ -4,6 +4,17 @@ from src.layers.saliency import SaliencyLayer
 from tensorflow.keras import Model
 
 
+def summarize_feature_maps(resnet50):
+    for i in range(len(resnet50.layers)):
+        layer = resnet50.layers[i]
+        # check for convolutional layer
+        # if 'conv' not in layer.name:
+        if re.match('.*conv[0-9]_block[0-9].*', layer.name):
+            continue
+        # summarize output shape
+        print(i, layer.name, layer.output.shape)
+
+
 def insert_saliency_layers(model, list_layer_regex, layer_names=None, position='after'):
     """
     Code inspired by https://www.xspdf.com/help/52662515.html

@@ -1,11 +1,13 @@
-from datetime import date
-
+import os
+import numpy as np
 import tensorflow as tf
 
-from torchvision import transforms
-from tensorflow.python.keras.preprocessing.image_dataset import image_dataset_from_directory
+from datetime import date
+from tensorflow.keras.preprocessing import image
+from tensorflow.keras.applications.resnet50 import preprocess_input, decode_predictions
 
-from src.dataset.dataset import CustomDataset
+from bin.utils.timethis import timethis
+from src.dataset.utils import read_image
 
 AUTOTUNE = tf.data.experimental.AUTOTUNE
 
@@ -17,7 +19,39 @@ class CustomDataLoader:
         self.image_size = image_size
         self.dataset = None
 
+    @timethis
     def load(self, resnet50):
+
+        pre_softmax_feature_extractor = tf.keras.Model(inputs=resnet50.inputs, outputs=resnet50.layers[-2].output)
+
+        images = []
+        features = []
+
+        for id, filename in enumerate(os.listdir(self.train_dir)):
+
+            image = read_image(self.train_dir + filename)
+            images.append(image[0])
+            pre_softmax_feature = pre_softmax_feature_extractor.predict(image)
+            features.append(pre_softmax_feature[0])
+
+            # if id > 10:
+            #     break
+
+        dataset = tf.data.Dataset.zip(
+            (tf.data.Dataset.from_tensor_slices(images),
+             tf.data.Dataset.from_tensor_slices(features)
+             )
+        )
+
+        dataset = dataset.batch(batch_size=self.batch_size)
+        self.dataset = dataset.prefetch(buffer_size=AUTOTUNE)
+
+        print("The data loader has loaded the dataset.")
+
+    def load_via_torch(self, resnet50):
+
+        from torchvision import transforms
+        from src.dataset.dataset import CustomDataset
 
         pre_softmax_feature_extractor = tf.keras.Model(inputs=resnet50.inputs, outputs=resnet50.layers[-2].output)
 
@@ -34,11 +68,11 @@ class CustomDataLoader:
         features = []
 
         for id, (image, filename) in enumerate(data):
+
             print(filename)
             image = tf.convert_to_tensor(image)
             image = tf.reshape(image, shape=(image.shape[1], image.shape[2], image.shape[0]))
             images.append(image)
-
             image = tf.expand_dims(image, axis=0)
             pre_softmax_feature = pre_softmax_feature_extractor.predict(image)
             features.append(pre_softmax_feature[0])

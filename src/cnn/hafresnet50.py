@@ -1,6 +1,7 @@
 import tensorflow as tf
 import numpy as np
 
+from bin.utils.timethis import timethis
 from src.cnn.hafmodel import HAFModel
 from src.layers.utils import insert_saliency_layers
 from src.losses.losses import haf_loss
@@ -16,8 +17,9 @@ class HAFResNet50Model(HAFModel):
         """
         layer_names = ['saliency_{0}'.format(i) for i in range(len(layers))]
 
-        self.haf_model = insert_saliency_layers(self.base_model, layers, layer_names=layer_names, position='before')
+        self.haf_model = insert_saliency_layers(self.base_model, layers, layer_names=layer_names, position='after')
 
+    @timethis
     def train(self, data_loader, lr=0.05, epochs=30, reg=0.5):
         """
         lr: learning rate
@@ -44,8 +46,8 @@ class HAFResNet50Model(HAFModel):
 
                 # Project Gradient Descent
                 for i, trainable_variable in enumerate(self.haf_model.trainable_variables):
-                    self.haf_model.trainable_variables[i] = tf.clip_by_value(trainable_variable, clip_value_min=0,
-                                                                             clip_value_max=np.inf)
+                    self.haf_model.trainable_variables[i].assign(tf.clip_by_value(trainable_variable, clip_value_min=0,
+                                                                                  clip_value_max=np.inf))
 
                 print("Epoch: {} Iteration: {} Loss: {}".format(epoch, iteration + 1, loss))
 
