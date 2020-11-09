@@ -23,7 +23,7 @@ def insert_saliency_layers(model, list_layer_regex, layer_names=None, position='
     network_dict = {'input_layers_of': {}, 'new_output_tensor_of': {}}
 
     # Set the input layers of each layer
-    for layer in model.layers[:-2]:
+    for layer in model.layers[:-1]:
         for node in layer._outbound_nodes:
             layer_name = node.outbound_layer.name
             if layer_name not in network_dict['input_layers_of']:
@@ -40,7 +40,7 @@ def insert_saliency_layers(model, list_layer_regex, layer_names=None, position='
     model_outputs = []
     i = 0
 
-    for layer in model.layers[1:-1]:
+    for layer in model.layers[1:]:
 
         # Determine input tensors
         layer_input = [network_dict['new_output_tensor_of'][layer_aux]

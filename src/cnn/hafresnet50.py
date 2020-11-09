@@ -19,6 +19,8 @@ class HAFResNet50Model(HAFModel):
 
         self.haf_model = insert_saliency_layers(self.base_model, layers, layer_names=layer_names, position='after')
 
+        self.haf_model.layers[-1].activation =  tf.keras.layers.Activation(activation='linear')
+
     @timethis
     def train(self, data_loader, lr=0.05, epochs=30, reg=0.5):
         """
@@ -32,12 +34,12 @@ class HAFResNet50Model(HAFModel):
         for epoch in range(1, epochs + 1):
             dataset = data_loader.dataset.shuffle(buffer_size=data_loader.batch_size * 8)
 
-            for iteration, (imagine, feature) in enumerate(dataset):
+            for iteration, (imagine, ground_score, ground_class) in enumerate(dataset):
                 with tf.GradientTape() as tape:
                     # make a prediction using the model and then calculate the loss
-                    pred = self.haf_model(imagine)
-                    # loss = tf.keras.losses.mse(sc_i, pred)
-                    loss = haf_loss(feature, pred, self.haf_model.trainable_variables, reg=reg)
+                    full_score_class = self.haf_model(imagine)
+
+                    loss = haf_loss(ground_score, full_score_class, self.haf_model.trainable_variables, reg=reg)
 
                 self.losses.append(loss)
                 # calculate the gradients using our tape and then update the model weights
