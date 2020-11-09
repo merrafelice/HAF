@@ -14,12 +14,12 @@ AUTOTUNE = tf.data.experimental.AUTOTUNE
 
 
 class CustomDataLoader:
-    def __init__(self, train_dir, image_size=(224, 224), batch_size=16, window=np.inf):
+    def __init__(self, train_dir, image_size=(224, 224), batch_size=16, window=0):
         self.train_dir = train_dir
         self.batch_size = batch_size
         self.image_size = image_size
         self.dataset = None
-        self.window = window
+        self.window = np.inf if window == 0 else window
 
     @timethis
     def load(self, resnet50):
