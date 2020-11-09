@@ -14,11 +14,12 @@ AUTOTUNE = tf.data.experimental.AUTOTUNE
 
 
 class CustomDataLoader:
-    def __init__(self, train_dir, image_size=(224, 224), batch_size=16):
+    def __init__(self, train_dir, image_size=(224, 224), batch_size=16, window=np.inf):
         self.train_dir = train_dir
         self.batch_size = batch_size
         self.image_size = image_size
         self.dataset = None
+        self.window = window
 
     @timethis
     def load(self, resnet50):
@@ -37,7 +38,7 @@ class CustomDataLoader:
             scores.append(score[0])
             image_classes.append(tf.math.argmax(score[0]))
 
-            if id > 10:
+            if id > self.window:
                 break
 
         dataset = tf.data.Dataset.zip(
