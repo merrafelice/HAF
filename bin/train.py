@@ -7,8 +7,8 @@ import tensorflow as tf
 
 from bin.utils.IO import read_config
 from bin.utils.parser import train_parse_args
-from src.cnn.hafresnet50 import HAFResNet50Model
 from src.dataset.data_loader import CustomDataLoader
+from src.cnn.hafresnet50 import HAFResNet50Model
 
 
 def train_haf():
