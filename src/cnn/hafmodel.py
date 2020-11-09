@@ -71,7 +71,7 @@ class HAFModel:
         """
         Saliency Mask Visualization inspired by https://machinelearningmastery.com/how-to-visualize-filters-and-feature-maps-in-convolutional-neural-networks/
         """
-        filename_images = np.random.choice(os.listdir(train_dir), 2)
+        filename_images = np.random.choice(os.listdir(train_dir), 50)
 
         for filename_image in filename_images:
 
@@ -126,7 +126,7 @@ class HAFModel:
         """
         Saliency Mask Visualization inspired by https://machinelearningmastery.com/how-to-visualize-filters-and-feature-maps-in-convolutional-neural-networks/
         """
-        filename_images = np.random.choice(os.listdir(train_dir), 2)
+        filename_images = np.random.choice(os.listdir(train_dir), 50)
 
         for filename_image in filename_images:
 
