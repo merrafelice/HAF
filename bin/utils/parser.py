@@ -11,6 +11,7 @@ def train_parse_args():
     parser.add_argument('--reg', type=int, default=1.0)
     parser.add_argument('--lr', type=int, default=0.05)
     parser.add_argument('--restore', type=bool, default=False)
+    parser.add_argument('--loss_sc', type=bool, default=False)
     parser.add_argument('--window', type=int, default=0)
 
     # parser.add_argument('--defense', type=int, default=0)  # 0 --> no defense mode, 1 --> defense mode

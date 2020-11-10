@@ -4,12 +4,13 @@ import numpy as np
 from bin.utils.timethis import timethis
 from src.cnn.hafmodel import HAFModel
 from src.layers.utils import insert_saliency_layers
-from src.losses.losses import haf_loss
+from src.losses.losses import haf_loss, haf_loss_single
 
 
 class HAFResNet50Model(HAFModel):
-    def __init__(self, base_model):
+    def __init__(self, base_model, loss_sc=False):
         super().__init__(base_model=base_model)
+        self.loss_sc = loss_sc
 
     def insert_saliency_layers(self, layers):
         """
@@ -39,7 +40,10 @@ class HAFResNet50Model(HAFModel):
                     # make a prediction using the model and then calculate the loss
                     full_score_class = self.haf_model(imagine)
 
-                    loss = haf_loss(ground_score, full_score_class, self.haf_model.trainable_variables, reg=reg)
+                    if self.loss_sc:
+                        loss = haf_loss_single(ground_class, ground_score, full_score_class, self.haf_model.trainable_variables, reg=reg)
+                    else:
+                        loss = haf_loss(ground_score, full_score_class, self.haf_model.trainable_variables, reg=reg)
 
                 self.losses.append(loss)
                 # calculate the gradients using our tape and then update the model weights

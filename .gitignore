@@ -20,3 +20,6 @@ pip-selfcheck.json
 
 /data/*
 .idea/*
+
+/saved_saliency_maps/*
+/saved_models/*

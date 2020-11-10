@@ -13,6 +13,12 @@ from src.cnn.hafresnet50 import HAFResNet50Model
 
 def train_haf():
     args = train_parse_args()
+
+    os.environ['CUDA_VISIBLE_DEVICES'] = str(args.gpu)
+    print('Device gpu: {0}'.format(os.environ['CUDA_VISIBLE_DEVICES']))
+
+    print(train_parse_args())
+
     train_dir, _, path_classes, path_weights, path_saved_smaps = read_config(
         sections_fields=[('ORIGINAL', 'Images'),
                          ('ORIGINAL', 'Features'),
@@ -39,7 +45,7 @@ def train_haf():
     loader.load(resnet50)
 
     # HAF Creation
-    haf_model = HAFResNet50Model(resnet50)
+    haf_model = HAFResNet50Model(resnet50, args.loss_sc)
 
     ## Make the base network (resnet50) untrainable
     haf_model.make_base_model_untrainable()
