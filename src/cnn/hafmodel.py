@@ -1,6 +1,6 @@
 import re
 from builtins import object
-
+import tensorflow.keras.backend as K
 import tensorflow as tf
 import matplotlib.pyplot as plt
 import pickle
@@ -11,8 +11,9 @@ from bin.utils.IO import save_obj, load_obj
 from src.dataset.data_loader import CustomDataLoader
 from src.dataset.utils import read_image
 from src.layers.utils import insert_saliency_layers
-from src.plot.utils import deprocess_img
+from src.plot.utils import deprocess_img, normalize
 import matplotlib.cm as cm
+import cv2
 
 np.random.seed(2006)
 
@@ -55,6 +56,7 @@ class HAFModel:
         if show:
             plt.show()
         if save:
+            os.makedirs(path_weights, exist_ok=True)
             plt.savefig(path_weights + 'losses.jpg')
 
     def get_model_with_saliency_output(self, new_layer):
@@ -71,9 +73,11 @@ class HAFModel:
         """
         Saliency Mask Visualization inspired by https://machinelearningmastery.com/how-to-visualize-filters-and-feature-maps-in-convolutional-neural-networks/
         """
-        filename_images = np.random.choice(os.listdir(train_dir), 50)
+        filename_images = np.random.choice(os.listdir(train_dir), 5)
 
-        for filename_image in filename_images:
+        for i, filename_image in enumerate(filename_images):
+
+            print('{} - Save saliency maps on image {}'.format(i+1, filename_image))
 
             image = read_image(train_dir + filename_image)
 
@@ -84,14 +88,21 @@ class HAFModel:
                 model = self.get_model_with_saliency_output(new_layer)
 
                 # get saliency map for first hidden layer
-                saliency_map = model.predict(image)
+                saliency_maps = model.predict(image)
 
-                saliency_map = np.mean(saliency_map, axis=-1)  # Channel Mean
-                saliency_map = np.resize(saliency_map,
-                                         new_shape=(
-                                             224,
-                                             224))  # Resize up-samples high-level attributions to the full image size
-                saliency_map = np.divide(saliency_map, np.max(saliency_map))
+                # for i in range(saliency_maps.shape[-1]):
+                saliency_map = np.mean(saliency_maps, axis=-1)  # Channel Mean
+                # saliency_map = saliency_maps[0][:, :, i]
+                saliency_map = cv2.resize(saliency_map[0], dsize=(224, 224), interpolation=cv2.INTER_CUBIC)
+                # saliency_map = cv2.resize(saliency_map[0], dsize=(224, 224), interpolation=cv2.INTER_NEAREST)
+
+                # NORMALIZE
+                # saliency_map = np.divide(saliency_map, np.max(saliency_map))
+                saliency_map = normalize(saliency_map)
+
+                # From Saliency Library (posso anche toglierlo)
+                saliency_map = np.uint8(cm.jet(saliency_map)[..., 0] * 255) # Probably we need to take the three channel
+
                 final_saliency.append(saliency_map)
 
                 plt.imshow(deprocess_img(image))
@@ -166,11 +177,22 @@ class HAFModel:
         print('Completed the Generation of Saliency Plots')
 
     def save_trainable_variables(self, path_weights):
+        os.makedirs(path_weights, exist_ok=True)
+
         save_obj(self.haf_model.trainable_variables, path_weights + 'trainable_vars')
+        save_obj(self.haf_model.trainable_weights, path_weights + 'trainable_weights')
+        save_obj(self.haf_model.weights, path_weights + 'weights')
 
     def restore_trainable_variables(self, path_weights):
         try:
             trainable_variables = load_obj(path_weights + 'trainable_vars')
-            self.haf_model.trainable_variables = trainable_variables
+            for i, trainable_variable in enumerate(trainable_variables):
+                self.haf_model.trainable_variables[i].assign(trainable_variable)
+            # trainable_weights = load_obj(path_weights + 'trainable_weights')
+            # for i, trainable_weight in trainable_weights:
+            #     self.haf_model.trainable_weights[i].assign(trainable_weight)
+            # weights = load_obj(path_weights + 'weights')
+            # for i, weight in weights:
+            #     self.haf_model.weights[i].assign(weight)
         except:
-            print('Error in the trainable variable loading\n*** Random Initialization ***')
+            print('Error in the restoring\n*** Random Initialization ***')

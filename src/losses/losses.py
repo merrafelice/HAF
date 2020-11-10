@@ -17,7 +17,7 @@ def haf_loss(y_true, y_pred, saliency_maps, reg):
     return loss + reg * reg_loss
 
 
-@tf.function
+# @tf.function
 def haf_loss_single(ground_classes, y_true, y_pred, saliency_maps, reg):
     loss = 0
     for i, ground_class in enumerate(ground_classes):

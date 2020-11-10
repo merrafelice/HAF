@@ -27,7 +27,7 @@ def train_haf():
                          ('OUTPUT', 'Saliency')])
 
     train_dir, path_weights, path_saved_smaps = train_dir.format(args.dataset), path_weights.format(
-        args.dataset), path_saved_smaps.format(args.dataset)
+        args.dataset, args.epochs, args.lr, args.batch_size, '_sc' if args.loss_sc else '_full'), path_saved_smaps.format(args.dataset, args.epochs, args.lr, args.batch_size, '_sc' if args.loss_sc else '_full')
 
     # Load Baseline CNN (e.g., ResNet50)
 
@@ -51,11 +51,14 @@ def train_haf():
     haf_model.make_base_model_untrainable()
 
     ## Insert Layers
+    # new_layers = ['.*conv2_block1_out.*', '.*conv2_block2_out.*', '.*conv2_block3_out*.']
+
     new_layers = ['.*conv2_block3_out.*', '.*conv3_block4_out.*', '.*conv4_block6_out*.', '.*conv5_block3_out*.']
     haf_model.insert_saliency_layers(new_layers)
 
     ## If restore is true then read the weights and put that trainable weights on the model
     if args.restore:
+        print('**** Restore ****')
         haf_model.restore_trainable_variables(path_weights)
     else:
         ## Train the Model
