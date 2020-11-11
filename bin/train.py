@@ -1,5 +1,6 @@
 import os
 import sys
+
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
@@ -27,7 +28,10 @@ def train_haf():
                          ('OUTPUT', 'Saliency')])
 
     train_dir, path_weights, path_saved_smaps = train_dir.format(args.dataset), path_weights.format(
-        args.dataset, args.epochs, args.lr, args.batch_size, '_sc' if args.loss_sc else '_full'), path_saved_smaps.format(args.dataset, args.epochs, args.lr, args.batch_size, '_sc' if args.loss_sc else '_full')
+        args.dataset, args.epochs, args.lr, args.batch_size,
+        '_sc' if args.loss_sc == 1 else '_full'), path_saved_smaps.format(args.dataset, args.epochs, args.lr,
+                                                                     args.batch_size,
+                                                                     '_sc' if args.loss_sc == 1 else '_full')
 
     # Load Baseline CNN (e.g., ResNet50)
 
@@ -40,7 +44,8 @@ def train_haf():
 
     # Read The Data
 
-    loader = CustomDataLoader(train_dir=train_dir, image_size=(224, 224), batch_size=args.batch_size, window=args.window)
+    loader = CustomDataLoader(train_dir=train_dir, image_size=(224, 224), batch_size=args.batch_size,
+                              window=args.window)
 
     loader.load(resnet50)
 
@@ -57,10 +62,11 @@ def train_haf():
     haf_model.insert_saliency_layers(new_layers)
 
     ## If restore is true then read the weights and put that trainable weights on the model
-    if args.restore:
+    if args.restore == 1:
         print('**** Restore ****')
-        haf_model.restore_trainable_variables(path_weights)
-    else:
+        error_in_restore = haf_model.restore_trainable_variables(path_weights)
+
+    if error_in_restore == 1:  # We have changed it in the previous line
         ## Train the Model
         haf_model.train(loader, lr=args.lr, epochs=args.epochs, reg=args.reg)
 

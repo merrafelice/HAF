@@ -84,31 +84,37 @@ class HAFModel:
             final_saliency = []
 
             for new_layer in new_layers:
+                # PLOT THE BASE IMAGE
+                plt.imshow(deprocess_img(image))
+
                 # redefine model to output right after the first hidden layer
                 model = self.get_model_with_saliency_output(new_layer)
 
                 # get saliency map for first hidden layer
                 saliency_maps = model.predict(image)
 
-                # for i in range(saliency_maps.shape[-1]):
+                # Evaluate the Mean over the Axis (e.g., there are 256 on the first saliency layer)
                 saliency_map = np.mean(saliency_maps, axis=-1)  # Channel Mean
-                # saliency_map = saliency_maps[0][:, :, i]
-                saliency_map = cv2.resize(saliency_map[0], dsize=(224, 224), interpolation=cv2.INTER_CUBIC)
-                # saliency_map = cv2.resize(saliency_map[0], dsize=(224, 224), interpolation=cv2.INTER_NEAREST)
+
+                # RESIZE
+                # saliency_map = cv2.resize(saliency_map[0], dsize=(224, 224), interpolation=cv2.INTER_CUBIC)
+                # This Resize give the effect with squares that we have in the paper
+                saliency_map = cv2.resize(saliency_map[0], dsize=(224, 224), interpolation=cv2.INTER_NEAREST)
 
                 # NORMALIZE
-                # saliency_map = np.divide(saliency_map, np.max(saliency_map))
-                saliency_map = normalize(saliency_map)
+                saliency_map = np.divide(saliency_map, np.max(saliency_map))
+                # saliency_map = normalize(saliency_map)
 
-                # From Saliency Library (posso anche toglierlo)
+                # Isolates the Squares as shown in the paper
                 saliency_map = np.uint8(cm.jet(saliency_map)[..., 0] * 255) # Probably we need to take the three channel
 
+                # ADD to the FINAL SALIENCY MAP
                 final_saliency.append(saliency_map)
 
-                plt.imshow(deprocess_img(image))
+                # GAUSSIAN FILTER
+                # saliency_map = ndimage.gaussian_filter(saliency_map, sigma=5)
 
-                gaus = ndimage.gaussian_filter(saliency_map, sigma=5)
-                plt.imshow(gaus, alpha=.7)
+                plt.imshow(saliency_map, alpha=.7)
 
                 # Create Image Directory
                 dir_image = path_saved_smaps + filename_image.split('.')[0]
@@ -194,5 +200,7 @@ class HAFModel:
             # weights = load_obj(path_weights + 'weights')
             # for i, weight in weights:
             #     self.haf_model.weights[i].assign(weight)
+            return 0
         except:
             print('Error in the restoring\n*** Random Initialization ***')
+            return 1
