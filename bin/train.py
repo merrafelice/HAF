@@ -46,8 +46,9 @@ def train_haf():
 
     loader = CustomDataLoader(train_dir=train_dir, image_size=(224, 224), batch_size=args.batch_size,
                               window=args.window)
-
+    print('Start Image Loading...')
     loader.load(resnet50)
+    print('End Image Loading!')
 
     # HAF Creation
     haf_model = HAFResNet50Model(resnet50, args.loss_sc)
@@ -62,11 +63,12 @@ def train_haf():
     haf_model.insert_saliency_layers(new_layers)
 
     ## If restore is true then read the weights and put that trainable weights on the model
+    error_in_restore = 0
     if args.restore == 1:
         print('**** Restore ****')
         error_in_restore = haf_model.restore_trainable_variables(path_weights)
 
-    if error_in_restore == 1:  # We have changed it in the previous line
+    if args.restore == 0 or error_in_restore == 1:  # We have changed it in the previous line
         ## Train the Model
         haf_model.train(loader, lr=args.lr, epochs=args.epochs, reg=args.reg)
 
