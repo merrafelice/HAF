@@ -1,4 +1,6 @@
 import re
+import tensorflow as tf
+import math
 
 from src.layers.saliency import SaliencyLayer
 from tensorflow.keras import Model
@@ -39,7 +41,7 @@ def insert_saliency_layers(model, list_layer_regex, layer_names=None, position='
     # Iterate over all layers after the input
     model_outputs = []
     i = 0
-
+    tis = []
     for layer in model.layers[1:]:
 
         # Determine input tensors
@@ -68,7 +70,7 @@ def insert_saliency_layers(model, list_layer_regex, layer_names=None, position='
                 new_layer._init_set_name('{}_{}'.format(layer.name,
                                                         new_layer.name))
             x = new_layer(x)
-
+            tis.append(tf.Variable(1 / math.sqrt(x.shape[1] * x.shape[2])))
             print('New layer added: {} Type: {}'.format(layer.name, position))
             i += 1
             if position == 'before':
@@ -84,4 +86,4 @@ def insert_saliency_layers(model, list_layer_regex, layer_names=None, position='
 
     model_outputs.append(x)
 
-    return Model(inputs=model.inputs, outputs=model_outputs)
+    return Model(inputs=model.inputs, outputs=model_outputs), tis

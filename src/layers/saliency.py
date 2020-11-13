@@ -16,24 +16,25 @@ class SaliencyLayer(tf.keras.layers.Layer):
         # first, let's get the output_shape
         output_shape = self.compute_output_shape(input_shape)
         weight_shape = (1,) + output_shape[1:]  # replace the batch size by 1
-        initializer = tf.initializers.glorot_uniform
-        self.saliency_matrix = self.add_weight(name='saliency_matrix',
-                                      shape=weight_shape,
-                                      initializer=initializer(),
-                                      trainable=True,
-                                      dtype=tf.float32)
+        # initializer = tf.random_normal_initializer(mean=0.0, stddev=0.05, seed=None)
+        initializer = tf.initializers.GlorotNormal()
+
+        self.saliency_matrix = tf.Variable(name='saliency_matrix',
+                                           initial_value=initializer(weight_shape),
+                                           trainable=True,
+                                           dtype=tf.float32)
 
         super(SaliencyLayer, self).build(input_shape)  # Be sure to call this somewhere!
 
     # here, we need to repeat the elements before multiplying
     def call(self, x):
 
-        if self.repeat_count > 1:
-            # we add the extra dimension:
-            x = K.expand_dims(x, axis=1)
-
-            # we replicate batch_size the elements
-            x = K.repeat_elements(x, rep=self.repeat_count, axis=1)
+        # if self.repeat_count > 1:
+        #     # we add the extra dimension:
+        #     x = K.expand_dims(x, axis=1)
+        #
+        #     # we replicate batch_size the elements
+        #     x = K.repeat_elements(x, rep=self.repeat_count, axis=1)
 
         # multiply
         return tf.math.multiply(x, self.saliency_matrix)

@@ -24,6 +24,7 @@ class HAFModel:
         self.haf_model = None
         self.losses = []  # The loss evolution at each batch iteration
         self.haf_mask = None  # The final saliency mask (M of eq. 17 in teh paper)
+        self.tis = []
 
     def make_base_model_untrainable(self):
         """
@@ -52,12 +53,13 @@ class HAFModel:
         """
         plt.plot(range(len(self.losses)), self.losses)
         plt.ylabel('Loss')
-        plt.xlabel('Number of Iterations')
+        plt.xlabel('Number of Epochs')
         if show:
             plt.show()
         if save:
             os.makedirs(path_weights, exist_ok=True)
             plt.savefig(path_weights + 'losses.jpg')
+        plt.close()
 
     def get_model_with_saliency_output(self, new_layer):
         """
@@ -67,25 +69,26 @@ class HAFModel:
             if re.match(new_layer, layer.name):
                 break
 
-        return tf.keras.Model(inputs=self.haf_model.inputs, outputs=self.haf_model.layers[id + 1].output)
+        return tf.keras.Model(inputs=self.haf_model.inputs, outputs=self.haf_model.layers[id].output)
 
     def plot_and_save_saliency_maps(self, new_layers, train_dir, path_saved_smaps, show=True, save=False):
         """
         Saliency Mask Visualization inspired by https://machinelearningmastery.com/how-to-visualize-filters-and-feature-maps-in-convolutional-neural-networks/
         """
-        filename_images = np.random.choice(os.listdir(train_dir), 5)
+        filename_images = np.random.choice(os.listdir(train_dir), 20)
 
         for i, filename_image in enumerate(filename_images):
 
-            print('{} - Save saliency maps on image {}'.format(i+1, filename_image))
+            print('{} - Save saliency maps on image {}'.format(i + 1, filename_image))
 
             image = read_image(train_dir + filename_image)
 
             final_saliency = []
 
             for new_layer in new_layers:
+
                 # PLOT THE BASE IMAGE
-                plt.imshow(deprocess_img(image))
+                # plt.imshow(deprocess_img(image))
 
                 # redefine model to output right after the first hidden layer
                 model = self.get_model_with_saliency_output(new_layer)
@@ -97,16 +100,22 @@ class HAFModel:
                 saliency_map = np.mean(saliency_maps, axis=-1)  # Channel Mean
 
                 # RESIZE
+                # saliency_map = saliency_map[0] # No Resize
                 # saliency_map = cv2.resize(saliency_map[0], dsize=(224, 224), interpolation=cv2.INTER_CUBIC)
                 # This Resize give the effect with squares that we have in the paper
                 saliency_map = cv2.resize(saliency_map[0], dsize=(224, 224), interpolation=cv2.INTER_NEAREST)
 
+                # saliency_map = cv2.resize(saliency_maps[0, ..., 2], dsize=(224, 224), interpolation=cv2.INTER_NEAREST)
+
+                ## CLIP
+                # saliency_map = np.clip(saliency_map, a_min=0, a_max=np.inf)
+
                 # NORMALIZE
-                saliency_map = np.divide(saliency_map, np.max(saliency_map))
-                # saliency_map = normalize(saliency_map)
+                # saliency_map = np.divide(saliency_map, np.max(saliency_map)+1e-10)
+                saliency_map = normalize(saliency_map)
 
                 # Isolates the Squares as shown in the paper
-                saliency_map = np.uint8(cm.jet(saliency_map)[..., 0] * 255) # Probably we need to take the three channel
+                # saliency_map = np.uint8(cm.jet(saliency_map)[..., :3] * 255) # Probably we need to take the three channel
 
                 # ADD to the FINAL SALIENCY MAP
                 final_saliency.append(saliency_map)
@@ -114,7 +123,9 @@ class HAFModel:
                 # GAUSSIAN FILTER
                 # saliency_map = ndimage.gaussian_filter(saliency_map, sigma=5)
 
-                plt.imshow(saliency_map, alpha=.7)
+                plt.title(new_layer)
+                # plt.imshow(saliency_map, alpha=.7)
+                plt.imshow(saliency_map)
 
                 # Create Image Directory
                 dir_image = path_saved_smaps + filename_image.split('.')[0]
@@ -127,15 +138,18 @@ class HAFModel:
                 if save:
                     plt.savefig(obj_name + '.jpg')
 
+                plt.close()
+
             # Final Saliency HAF
-
+            plt.title('HAF')
             plt.imshow(deprocess_img(image))
 
-            plt.imshow(deprocess_img(image))
             final_saliency = np.mean(final_saliency, axis=0)
-            final_gaus = ndimage.gaussian_filter(final_saliency, sigma=5)
-            plt.imshow(final_gaus, alpha=.7)
+            final_saliency = ndimage.gaussian_filter(final_saliency, sigma=5)
+            plt.imshow(final_saliency, alpha=.7)
             plt.savefig(obj_name + '_HAF.jpg')
+            # plt.show()
+            plt.close()
 
         print('Completed the Generation of Saliency Plots')
 

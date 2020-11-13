@@ -4,7 +4,7 @@ import math
 from tensorflow.python.ops import math_ops
 
 
-@tf.function
+# @tf.function
 def haf_loss(y_true, y_pred, saliency_maps, reg):
     loss = tf.reduce_mean(tf.reduce_sum(math_ops.pow(y_pred - y_true, 2), axis=1), axis=0)
     reg_loss = 0
@@ -18,7 +18,7 @@ def haf_loss(y_true, y_pred, saliency_maps, reg):
 
 
 # @tf.function
-def haf_loss_single(ground_classes, y_true, y_pred, saliency_maps, reg):
+def haf_loss_single(tis, ground_classes, y_true, y_pred, saliency_maps, reg):
     loss = 0
     for i, ground_class in enumerate(ground_classes):
         loss += math_ops.pow(y_pred[i][ground_class] - y_true[i][ground_class], 2)

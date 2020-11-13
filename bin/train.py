@@ -12,6 +12,11 @@ from src.dataset.data_loader import CustomDataLoader
 from src.cnn.hafresnet50 import HAFResNet50Model
 
 
+def name_dir(arg_name, args):
+    return arg_name.format(args.dataset, args.epochs, args.lr, args.batch_size, '_sc' if args.loss_sc == 1 else '_full', 'after' if args.after == 1 else 'before', 'ALL' if args.window == 0 else str(
+        args.window))
+
+
 def train_haf():
     args = train_parse_args()
 
@@ -27,11 +32,7 @@ def train_haf():
                          ('OUTPUT', 'Weights'),
                          ('OUTPUT', 'Saliency')])
 
-    train_dir, path_weights, path_saved_smaps = train_dir.format(args.dataset), path_weights.format(
-        args.dataset, args.epochs, args.lr, args.batch_size,
-        '_sc' if args.loss_sc == 1 else '_full'), path_saved_smaps.format(args.dataset, args.epochs, args.lr,
-                                                                     args.batch_size,
-                                                                     '_sc' if args.loss_sc == 1 else '_full')
+    train_dir, path_weights, path_saved_smaps = train_dir.format(args.dataset), name_dir(path_weights, args), name_dir(path_saved_smaps, args)
 
     # Load Baseline CNN (e.g., ResNet50)
 
@@ -60,7 +61,7 @@ def train_haf():
     # new_layers = ['.*conv2_block1_out.*', '.*conv2_block2_out.*', '.*conv2_block3_out*.']
 
     new_layers = ['.*conv2_block3_out.*', '.*conv3_block4_out.*', '.*conv4_block6_out*.', '.*conv5_block3_out*.']
-    haf_model.insert_saliency_layers(new_layers)
+    haf_model.insert_saliency_layers(new_layers, args.after)
 
     ## If restore is true then read the weights and put that trainable weights on the model
     error_in_restore = 0
@@ -83,7 +84,7 @@ def train_haf():
 
     ## Save and Visualize the Saliency MAP for each image (Also HAF)
     haf_model.plot_and_save_saliency_maps(new_layers=new_layers, train_dir=train_dir, path_saved_smaps=path_saved_smaps,
-                                          show=False, save=True)
+                                          show=True, save=True)
 
 
 if __name__ == '__main__':
