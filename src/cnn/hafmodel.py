@@ -9,7 +9,7 @@ import os
 import scipy.ndimage as ndimage
 from bin.utils.IO import save_obj, load_obj
 from src.dataset.data_loader import CustomDataLoader
-from src.dataset.utils import read_image
+from src.dataset.utils import read_image, old_read_image
 from src.layers.utils import insert_saliency_layers
 from src.plot.utils import deprocess_img, normalize
 import matplotlib.cm as cm
@@ -69,26 +69,27 @@ class HAFModel:
             if re.match(new_layer, layer.name):
                 break
 
-        return tf.keras.Model(inputs=self.haf_model.inputs, outputs=self.haf_model.layers[id].output)
+        return tf.keras.Model(inputs=self.haf_model.inputs, outputs=self.haf_model.layers[id + 1].output)
 
     def plot_and_save_saliency_maps(self, new_layers, train_dir, path_saved_smaps, show=True, save=False):
         """
         Saliency Mask Visualization inspired by https://machinelearningmastery.com/how-to-visualize-filters-and-feature-maps-in-convolutional-neural-networks/
         """
-        filename_images = np.random.choice(os.listdir(train_dir), 20)
+        filename_images = np.random.choice(os.listdir(train_dir), 10)
 
-        for i, filename_image in enumerate(filename_images):
+        for i, filename_image in enumerate(
+                ['24.jpg', '24_attack.tiff', '98.jpg', '98_attack.tiff']):  # +filename_images.tolist() ):
 
             print('{} - Save saliency maps on image {}'.format(i + 1, filename_image))
 
-            image = read_image(train_dir + filename_image)
+            image = old_read_image(train_dir + filename_image)
 
             final_saliency = []
 
-            for new_layer in new_layers:
+            for new_layer in new_layers[-1:]:
 
                 # PLOT THE BASE IMAGE
-                # plt.imshow(deprocess_img(image))
+                plt.imshow(deprocess_img(image))
 
                 # redefine model to output right after the first hidden layer
                 model = self.get_model_with_saliency_output(new_layer)
@@ -97,13 +98,20 @@ class HAFModel:
                 saliency_maps = model.predict(image)
 
                 # Evaluate the Mean over the Axis (e.g., there are 256 on the first saliency layer)
-                saliency_map = np.mean(saliency_maps, axis=-1)  # Channel Mean
+                saliency_map = np.mean(saliency_maps[0], axis=-1)  # Channel Mean
+
+                # saliency_map = np.zeros(shape=(7, 7))
+                # for i in range(saliency_maps.shape[-1]):
+                #     # print(saliency_maps[0][..., i].shape)
+                #     saliency_map += saliency_maps[0][..., i]
+                #
+                # saliency_map /= saliency_maps.shape[-1]
 
                 # RESIZE
                 # saliency_map = saliency_map[0] # No Resize
                 # saliency_map = cv2.resize(saliency_map[0], dsize=(224, 224), interpolation=cv2.INTER_CUBIC)
                 # This Resize give the effect with squares that we have in the paper
-                saliency_map = cv2.resize(saliency_map[0], dsize=(224, 224), interpolation=cv2.INTER_NEAREST)
+                saliency_map = cv2.resize(saliency_map, dsize=(224, 224), interpolation=cv2.INTER_NEAREST)
 
                 # saliency_map = cv2.resize(saliency_maps[0, ..., 2], dsize=(224, 224), interpolation=cv2.INTER_NEAREST)
 
@@ -126,6 +134,8 @@ class HAFModel:
                 plt.title(new_layer)
                 # plt.imshow(saliency_map, alpha=.7)
                 plt.imshow(saliency_map)
+
+                # plt.imshow(saliency_map)
 
                 # Create Image Directory
                 dir_image = path_saved_smaps + filename_image.split('.')[0]
