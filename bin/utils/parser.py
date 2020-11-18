@@ -6,7 +6,7 @@ def train_parse_args():
     parser.add_argument('--gpu', type=int, default=0)
     parser.add_argument('--dataset', nargs='?', default='amazon_men',
                         help='dataset path: amazon_men, amazon_women, amazon_beauty')
-    parser.add_argument('--batch_size', type=int, default=16)
+    parser.add_argument('--batch_size', type=int, default=1)
     parser.add_argument('--epochs', type=int, default=5)
     parser.add_argument('--reg', type=float, default=1)
     parser.add_argument('--lr', type=float, default=0.05)

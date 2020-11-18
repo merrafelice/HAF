@@ -13,7 +13,25 @@ from src.cnn.hafresnet50 import HAFResNet50Model
 
 
 def name_dir(arg_name, args):
-    return arg_name.format(args.dataset, args.epochs, args.lr, args.batch_size, '_sc' if args.loss_sc == 1 else '_full', 'after' if args.after == 1 else 'before', args.reg)
+    return arg_name.format(args.dataset, args.epochs, args.lr, args.batch_size, '_sc' if args.loss_sc == 1 else '_full',
+                           'after' if args.after == 1 else 'before', args.reg)
+
+
+def change_activation(model):
+    assert model.layers[-1].activation == tf.keras.activations.softmax
+
+    config = model.layers[-1].get_config()
+    weights = [x.numpy() for x in model.layers[-1].weights]
+
+    config['activation'] = tf.keras.activations.linear
+    config['name'] = 'logits'
+
+    new_layer = tf.keras.layers.Dense(**config)(model.layers[-2].output)
+    new_model = tf.keras.Model(inputs=[model.input], outputs=[new_layer])
+    new_model.layers[-1].set_weights(weights)
+
+    assert new_model.layers[-1].activation == tf.keras.activations.linear
+    return new_model
 
 
 def train_haf():
@@ -31,7 +49,8 @@ def train_haf():
                          ('OUTPUT', 'Weights'),
                          ('OUTPUT', 'Saliency')])
 
-    train_dir, path_weights, path_saved_smaps = train_dir.format(args.dataset), name_dir(path_weights, args), name_dir(path_saved_smaps, args)
+    train_dir, path_weights, path_saved_smaps = train_dir.format(args.dataset), name_dir(path_weights, args), name_dir(
+        path_saved_smaps, args)
 
     # Load Baseline CNN (e.g., ResNet50)
 
@@ -39,6 +58,7 @@ def train_haf():
         include_top=True, weights='imagenet', input_tensor=None, pooling=None, classes=1000
     )
 
+    resnet50 = change_activation(resnet50)
     # model = resnet_50()
     # model.build(input_shape=(None, 224, 224, 3))
     # model.summary()
@@ -62,32 +82,11 @@ def train_haf():
     ## Insert Layers
     # new_layers = ['.*conv2_block1_out.*', '.*conv2_block2_out.*', '.*conv2_block3_out*.']
 
-    # new_layers = ['.*conv2_block3_add.*', '.*conv3_block4_add.*', '.*conv4_block6_add*.', '.*conv5_block3_add*.']
-    new_layers = ['.*conv5_block3_add*.']
-    haf_model.insert_saliency_layers(new_layers, 1)
+    new_layers = ['.*conv2_block3_add.*', '.*conv3_block4_add.*', '.*conv4_block6_add*.', '.*conv5_block3_add*.']
+    new_layers = ['.*conv2_block3_add.*','.*conv3_block3_add.*', '.*conv4_block5_add*.', '.*conv5_block3_add*.']
+    haf_model.insert_saliency_layers(new_layers[-1:], 1)
 
-    ## If restore is true then read the weights and put that trainable weights on the model
-    error_in_restore = 0
-    if args.restore == 1:
-        print('**** Restore ****')
-        error_in_restore = haf_model.restore_trainable_variables(path_weights)
-
-    if args.restore == 0 or error_in_restore == 1:  # We have changed it in the previous line
-        ## Train the Model
-        haf_model.train(loader, lr=args.lr, epochs=args.epochs)
-
-        ## Plot Losses
-        haf_model.plot_loss(path_weights)
-
-        ## Save the Trainable variables
-        haf_model.save_trainable_variables(path_weights)
-
-    ## Save the HAF of the Model
-    # haf_model.evaluate_and_save_the_final_mask(path_weights)
-
-    ## Save and Visualize the Saliency MAP for each image (Also HAF)
-    haf_model.plot_and_save_saliency_maps(new_layers=new_layers, train_dir=train_dir, path_saved_smaps=path_saved_smaps,
-                                          show=False, save=True)
+    haf_model.train(loader, lr=args.lr, epochs=args.epochs, train_dir=train_dir, path_saved_smaps=path_saved_smaps)
 
 
 if __name__ == '__main__':

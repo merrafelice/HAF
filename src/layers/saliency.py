@@ -24,6 +24,11 @@ class SaliencyLayer(tf.keras.layers.Layer):
                                            trainable=True,
                                            dtype=tf.float32)
 
+        # self.saliency_matrix = tf.Variable(tf.ones(shape=weight_shape),
+        #                                    name='saliency_matrix',
+        #                                    trainable=True,
+        #                                    dtype=tf.float32)
+
         super(SaliencyLayer, self).build(input_shape)  # Be sure to call this somewhere!
 
     # here, we need to repeat the elements before multiplying

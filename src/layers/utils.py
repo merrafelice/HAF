@@ -19,8 +19,7 @@ def summarize_feature_maps(resnet50):
         print(i, layer.name, layer.output.shape)
 
 
-def insert_saliency_layers(model, list_layer_regex,
-                           insert_layer_name=None, position='after'):
+def insert_saliency_layers(model, list_layer_regex, reg, position='after'):
     # Auxiliary dictionary to describe the network graph
     network_dict = {'input_layers_of': {}, 'new_output_tensor_of': {}}
 
@@ -37,9 +36,6 @@ def insert_saliency_layers(model, list_layer_regex,
     # Set the output tensor of the input layer
     network_dict['new_output_tensor_of'].update(
         {model.layers[0].name: model.input})
-
-    input_shape = model.layers[0].get_input_shape_at(0)  # get the input shape of desired layer
-    my_layer_input = Input(shape=input_shape[1:])
 
     went_in = 0
     tis = []
@@ -64,7 +60,7 @@ def insert_saliency_layers(model, list_layer_regex,
             else:
                 raise ValueError('position must be: before, after or replace')
 
-            # new_layer = SaliencyLayer(activity_regularizer=tf.keras.regularizers.L1(1.0*1 / math.sqrt(x.shape[1] * x.shape[2])))
+            # new_layer = SaliencyLayer(activity_regularizer=tf.keras.regularizers.L1(reg*1 / math.sqrt(x.shape[1] * x.shape[2])))
             new_layer = SaliencyLayer()
             # if insert_layer_name:
             #     new_layer.name = insert_layer_name
@@ -80,36 +76,17 @@ def insert_saliency_layers(model, list_layer_regex,
             if position == 'before':
                 x = layer(x)
         else:
-            if id == 0:
-
-                x = layer(my_layer_input)
+            if went_in: # TEST
+                x = tf.keras.layers.Activation('relu')(layer_input)
+                went_in = 0
             else:
-                if went_in:
-                    x = tf.keras.layers.Activation('relu')(layer_input)
-                    went_in = 0
-                else:
-                    x = layer(layer_input)
+                x = layer(layer_input)
 
         # Set new output tensor (the original one, or the one of the inserted
         # layer)
         network_dict['new_output_tensor_of'].update({layer.name: x})
 
-    return Model(inputs=my_layer_input, outputs=x, name='new_model'), tis
-
-
-def insert_intermediate_layer_in_keras(model, layer_id):
-    from keras.models import Model
-
-    layers = [l for l in model.layers]
-
-    x = layers[0].output
-    for i in range(1, len(layers)):
-        if i == layer_id:
-            x = SaliencyLayer(x)
-        x = layers[i](x)
-
-    new_model = Model(input=layers[0].input, output=x)
-    return new_model
+    return Model(inputs=model.input, outputs=x, name='new_model'), tis
 
 
 def OLD_insert_saliency_layers(model, list_layer_regex, layer_names=None, position='after'):

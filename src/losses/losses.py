@@ -19,15 +19,12 @@ def haf_loss(y_true, y_pred, saliency_maps, reg):
 
 # @tf.function
 def haf_loss_single(tis, ground_classes, y_true, y_pred, saliency_maps, reg):
-    loss = 0
-    for i, ground_class in enumerate(ground_classes):
-        loss += math_ops.pow(y_pred[i][ground_class] - y_true[i][ground_class], 2)
-    loss = tf.divide(loss, ground_classes.shape[0])
+    loss = tf.keras.losses.MeanSquaredError()
+    loss = loss(tf.gather(y_true, ground_classes, axis=1), tf.gather(y_pred, ground_classes, axis=1) )
+
     reg_loss = 0
+    regularizer = tf.keras.regularizers.L1(l1=reg)
+    for i, saliency_map in enumerate(saliency_maps):
+        reg_loss += tis[i] * regularizer(saliency_map)
 
-    for saliency_map in saliency_maps:
-        ti = 1 / math.sqrt(saliency_map.shape[1] * saliency_map.shape[2])
-        l1_saliency_map = tf.norm(saliency_map, ord=1)
-        reg_loss += ti * l1_saliency_map
-
-    return loss + reg * reg_loss
+    return loss, loss + reg_loss

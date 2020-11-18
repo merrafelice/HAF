@@ -80,22 +80,23 @@ class CustomDataLoader:
         self.window = np.inf if window == 0 else window
 
         self.resnet50 = resnet50
+        self.resnet50.layers[-1].activation = tf.keras.layers.Activation(activation='linear')
 
     def pp(self, filename):
         image = read_image(filename)
         img = tf.expand_dims(image, axis=0)
         score = self.resnet50(img, training=False)
         image_classe = tf.math.argmax(score[0])
-        return image, score[0], image_classe
+        return image, score[0], image_classe, filename
 
     def pre_process(self, filename):
         image, score, image_classe = tf.py_function(self.pp, (self.train_dir + filename,),
                                                     (tf.float32, tf.float32, tf.int64,))
-        return image, score, image_classe
+        return image, score, image_classe, filename
 
     @timethis
     def load_files(self):
-        self.data_map = tf.data.Dataset.from_tensor_slices(os.listdir(self.train_dir))
+        self.data_map = tf.data.Dataset.from_tensor_slices(sorted(os.listdir(self.train_dir)))
         self.data_map = self.data_map.map(self.pre_process, AUTOTUNE)
 
     @timethis

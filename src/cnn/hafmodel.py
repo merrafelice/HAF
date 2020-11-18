@@ -228,3 +228,88 @@ class HAFModel:
         except:
             print('Error in the restoring\n*** Random Initialization ***')
             return 1
+
+    def reinit_trainable_variables(self):
+        initializer = tf.initializers.GlorotNormal()
+        for i, trainable_variable in enumerate(self.haf_model.trainable_variables):
+            self.haf_model.trainable_variables[i].assign(initializer(trainable_variable.shape))
+
+    def plot_and_save_saliency_maps_for_an_image(self, M, filename_image, train_dir, path_saved_smaps, show=True,
+                                                 save=False):
+        """
+        Saliency Mask Visualization inspired by https://machinelearningmastery.com/how-to-visualize-filters-and-feature-maps-in-convolutional-neural-networks/
+        """
+        print('\tSave saliency maps on image {}'.format(filename_image))
+
+        image = old_read_image(train_dir + filename_image)
+
+        final_saliency = []
+
+        for m, saliency_map in enumerate(M):
+
+            # PLOT THE BASE IMAGE
+            # plt.imshow(deprocess_img(image))
+
+            # Evaluate the Mean over the Axis (e.g., there are 256 on the first saliency layer)
+            saliency_map = np.mean(saliency_map[0], axis=-1)  # Channel Mean
+
+            tit = "{0} - M_{1} - std: {2}".format(filename_image, m, str(np.std(saliency_map)))
+            print(tit)
+
+            # RESIZE
+            # saliency_map = saliency_map[0] # No Resize
+            # saliency_map = cv2.resize(saliency_map[0], dsize=(224, 224), interpolation=cv2.INTER_CUBIC)
+            # This Resize give the effect with squares that we have in the paper
+            saliency_map = cv2.resize(saliency_map, dsize=(224, 224), interpolation=cv2.INTER_NEAREST)
+
+            # saliency_map = cv2.resize(saliency_maps[0, ..., 2], dsize=(224, 224), interpolation=cv2.INTER_NEAREST)
+
+            ## CLIP
+            # saliency_map = np.clip(saliency_map, a_min=0, a_max=np.inf)
+
+            # NORMALIZE
+            saliency_map = np.divide(saliency_map, np.max(saliency_map)+1e-10)
+            # saliency_map = normalize(saliency_map)
+
+            # Isolates the Squares as shown in the paper
+            # saliency_map = np.uint8(cm.jet(saliency_map)[..., :3] * 255) # Probably we need to take the three channel
+
+            # ADD to the FINAL SALIENCY MAP
+            final_saliency.append(saliency_map)
+
+            # GAUSSIAN FILTER
+            # saliency_map = ndimage.gaussian_filter(saliency_map, sigma=5)
+
+            plt.title(tit)
+            # plt.imshow(saliency_map, alpha=.7)
+            plt.imshow(saliency_map)
+
+            # plt.imshow(saliency_map)
+
+            # Create Image Directory
+            dir_image = path_saved_smaps + filename_image.split('.')[0]
+            os.makedirs(dir_image, exist_ok=True)
+            obj_name = '{0}/sm_m{1}'.format(dir_image, m)
+            save_obj(saliency_map, obj_name)
+
+            if show:
+                plt.show()
+            if save:
+                plt.savefig(obj_name + '.jpg')
+
+            plt.close()
+
+        # Final Saliency HAF
+        plt.title('HAF')
+        plt.imshow(deprocess_img(image))
+
+        final_saliency = np.mean(final_saliency, axis=0)
+        final_saliency = ndimage.gaussian_filter(final_saliency, sigma=5)
+        plt.imshow(final_saliency, alpha=.7)
+        plt.title("{0} - HAF".format(filename_image))
+        plt.savefig('{0}/HAF.jpg'.format(dir_image))
+        if show:
+            plt.show()
+        plt.close()
+
+        print('Completed the Generation of Saliency Plots')
